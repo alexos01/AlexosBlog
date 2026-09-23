@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alexos - Connect & Share</title>
+    <style>
+        :root {
+            --bg-primary: #f4f6f8;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e4e6eb;
+            --text-primary: #050505;
+            --text-secondary: #65676b;
+            --border-color: #ced0d4;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-light: rgba(99, 102, 241, 0.1);
+            --danger: #ef4444;
+            --success: #10b981;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --glass: rgba(255, 255, 255, 0.7);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f0f13;
+            --bg-secondary: #1a1a24;
+            --bg-tertiary: #27272a;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --border-color: #3f3f46;
+            --accent: #818cf8;
+            --accent-hover: #6366f1;
+            --accent-light: rgba(129, 140, 248, 0.15);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --glass: rgba(26, 26, 36, 0.8);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+
+        /* --- AUTH SCREEN --- */
+        .auth-overlay {
+            position: fixed; inset: 0; background: var(--bg-primary);
+            display: flex; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .auth-card {
+            background: var(--bg-secondary); padding: 40px; border-radius: 20px;
+            box-shadow: var(--shadow); width: 100%; max-width: 400px; text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        .auth-logo { font-size: 36px; font-weight: 800; color: var(--accent); margin-bottom: 5px; }
+        .auth-subtitle { color: var(--text-secondary); margin-bottom: 30px; font-size: 14px; }
+        .auth-tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+        .auth-tab {
+            flex: 1; padding: 12px; cursor: pointer; font-weight: 600; color: var(--text-secondary);
+            border-bottom: 2px solid transparent; transition: all 0.2s;
+        }
+        .auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .auth-input {
+            width: 100%; padding: 12px 15px; margin-bottom: 15px; border-radius: 10px;
+            border: 1px solid var(--border-color); background: var(--bg-tertiary);
+            color: var(--text-primary); font-size: 15px; outline: none;
+        }
+        .auth-input:focus { border-color: var(--accent); }
+        .auth-btn {
+            width: 100%; padding: 12px; background: var(--accent); color: white; border: none;
+            border-radius: 10px; font-weight: 600; font-size: 16px; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .auth-btn:hover { background: var(--accent-hover); }
+        .auth-error { color: var(--danger); font-size: 14px; margin-bottom: 15px; min-height: 20px; }
+
+        /* --- MAIN APP LAYOUT --- */
+        .app-container { display: none; height: 100vh; flex-direction: column; }
+        .app-container.active { display: flex; }
+
+        /* Top Nav */
+        .top-nav {
+            height: 60px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .nav-logo { font-size: 24px; font-weight: 800; color: var(--accent); }
+        .nav-actions { display: flex; align-items: center; gap: 15px; }
+        .nav-btn {
+            width: 40px; height: 40px; border-radius: 50%; background: var(--bg-tertiary);
+            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: var(--text-primary); position: relative; transition: background 0.2s;
+        }
+        .nav-btn:hover { background: var(--border-color); }
+        .badge {
+            position: absolute; top: -2px; right: -2px; background: var(--danger); color: white;
+            font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 10px; display: none;
+        }
+        .badge.active { display: block; }
+        .user-avatar-nav {
+            width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 2px solid var(--accent);
+        }
+
+        /* Main Content Area */
+        .main-content { flex: 1; overflow-y: auto; display: flex; justify-content: center; }
+        .content-wrapper { width: 100%; max-width: 680px; padding: 20px; }
+
+        /* Views */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* --- FEED VIEW --- */
+        .card {
+            background: var(--bg-secondary); border-radius: 16px; border: 1px solid var(--border-color);
+            margin-bottom: 20px; overflow: hidden; box-shadow: var(--shadow);
+        }
+        .composer { padding: 15px; }
+        .composer-header { display: flex; gap: 10px; margin-bottom: 12px; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--bg-tertiary); }
+        .composer-input {
+            flex: 1; background: var(--bg-tertiary); border: none; border-radius: 20px;
+            padding: 10px 15px; font-size: 15px; color: var(--text-primary); outline: none;
+            resize: none; width: 100%; font-family: inherit; min-height: 40px;
+        }
+        .composer-actions { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px; }
+        .action-group { display: flex; gap: 10px; align-items: center; }
+        .vibe-btn { font-size: 20px; cursor: pointer; padding: 4px; border-radius: 50%; border: 2px solid transparent; background: transparent; transition: all 0.2s; }
+        .vibe-btn.active { border-color: var(--accent); transform: scale(1.2); }
+        .post-btn { background: var(--accent); color: white; border: none; padding: 8px 20px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        .post-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .post-card { border-left: 4px solid transparent; }
+        .post-card.vibe-chill { border-left-color: #00c6ff; }
+        .post-card.vibe-hype { border-left-color: #ff512f; }
+        .post-card.vibe-nature { border-left-color: #56ab2f; }
+        .post-card.vibe-night { border-left-color: #8e2de2; }
+
+        .post-header { display: flex; align-items: center; padding: 12px 15px; gap: 10px; }
+        .post-user-info { flex: 1; }
+        .post-user-name { font-weight: 600; font-size: 15px; }
+        .post-time { font-size: 13px; color: var(--text-secondary); }
+        .post-content { padding: 0 15px 12px; font-size: 15px; white-space: pre-wrap; }
+        .post-image { width: 100%; max-height: 500px; object-fit: cover; }
+        .delete-post-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 20px; padding: 5px; border-radius: 50%; }
+        .delete-post-btn:hover { background: var(--bg-tertiary); color: var(--danger); }
+
+        /* --- INBOX VIEW --- */
+        .inbox-container { display: flex; height: calc(100vh - 100px); background: var(--bg-secondary); border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
+        .contacts-list { width: 300px; border-right: 1px solid var(--border-color); overflow-y: auto; }
+        .contact-item { display: flex; align-items: center; gap: 10px; padding: 15px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid var(--border-color); }
+        .contact-item:hover, .contact-item.active { background: var(--accent-light); }
+        .contact-name { font-weight: 600; font-size: 15px; }
+        .contact-preview { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;}
+        
+        .chat-area { flex: 1; display: flex; flex-direction: column; }
+        .chat-header { padding: 15px; border-bottom: 1px solid var(--border-color); font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .message-bubble { max-width: 70%; padding: 10px 15px; border-radius: 18px; font-size: 14px; word-wrap: break-word; }
+        .message-sent { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 4px; }
+        .message-received { align-self: flex-start; background: var(--bg-tertiary); color: var(--text-primary); border-bottom-left-radius: 4px; }
+        .chat-input-area { padding: 15px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        .chat-input { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); outline: none; }
+        .send-btn { background: var(--accent); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; }
+
+        .empty-chat { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); flex-direction: column; gap: 10px;}
+
+        /* --- PROFILE VIEW --- */
+        .profile-header { text-align: center; padding: 40px 20px; }
+        .profile-avatar { width: 100px; height: 100px; border-radius: 50%; border: 4px solid var(--accent); margin-bottom: 15px; }
+        .profile-name { font-size: 24px; font-weight: 700; }
+        .profile-bio { color: var(--text-secondary); margin-top: 5px; }
+        .logout-btn { margin-top: 20px; padding: 10px 20px; background: var(--danger); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.3s ease-out; }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .contacts-list { width: 100%; }
+            .chat-area { display: none; }
+            .chat-area.active-mobile { display: flex; position: absolute; inset: 0; background: var(--bg-secondary); z-index: 10; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- AUTH SCREEN -->
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-card">
+            <div class="auth-logo">Alexos</div>
+            <div class="auth-subtitle">Connect, Share, and Vibe. Crafted by Lwandile.</div>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login">Log In</div>
+                <div class="auth-tab" data-tab="signup">Sign Up</div>
+            </div>
+
+            <div id="authError" class="auth-error"></div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form">
+                <input type="text" class="auth-input" id="loginUsername" placeholder="Username" required>
+                <input type="password" class="auth-input" id="loginPassword" placeholder="Password" required>
+                <button type="submit" class="auth-btn">Log In</button>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="signupForm" class="auth-form" style="display: none;">
+                <input type="text" class="auth-input" id="signupUsername" placeholder="Choose a Username" required>
+                <input type="password" class="auth-input" id="signupPassword" placeholder="Create Password" required>
+                <input type="text" class="auth-input" id="signupBio" placeholder="Short bio (optional)">
+                <button type="submit" class="auth-btn">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div class="app-container" id="appContainer">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <div class="nav-logo">Alexos</div>
+            <div class="nav-actions">
+                <button class="nav-btn" id="themeToggle" title="Toggle Theme">🌙</button>
+                <button class="nav-btn" id="inboxBtn" title="Inbox">
+                    💬 <span class="badge" id="inboxBadge">0</span>
+                </button>
+                <button class="nav-btn" id="feedBtn" title="Feed">🏠</button>
+                <img src="" alt="Profile" class="user-avatar-nav" id="navAvatar">
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="content-wrapper">
+                
+                <!-- FEED VIEW -->
+                <div class="view active" id="feedView">
+                    <div class="card composer">
+                        <div class="composer-header">
+                            <img src="" alt="Avatar" class="avatar" id="composerAvatar">
+                            <textarea class="composer-input" id="postInput" placeholder="What's on your mind?" rows="1"></textarea>
+                        </div>
+                        <div class="composer-actions">
+                            <div class="action-group">
+                                <label class="action-btn" for="imageUpload" style="cursor:pointer; color: var(--text-secondary);">🖼️</label>
+                                <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                                <div style="display: flex; gap: 5px;">
+                                    <button class="vibe-btn" data-vibe="chill" title="Chill">🌊</button>
+                                    <button class="vibe-btn" data-vibe="hype" title="Hype">🔥</button>
+                                    <button class="vibe-btn" data-vibe="nature" title="Nature">🌿</button>
+                                    <button class="vibe-btn" data-vibe="night" title="Night">🌙</button>
+                                </div>
+                            </div>
+                            <button class="post-btn" id="publishBtn" disabled>Post</button>
+                        </div>
+                    </div>
+                    <div id="feedContainer"></div>
+                </div>
+
+                <!-- INBOX VIEW -->
+                <div class="view" id="inboxView">
+                    <div class="inbox-container">
+                        <div class="contacts-list" id="contactsList"></div>
+                        <div class="chat-area" id="chatArea">
+                            <div class="empty-chat">
+                                <span style="font-size: 40px;">💬</span>
+                                <p>Select a conversation to start messaging</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROFILE VIEW -->
+                <div class="view" id="profileView">
+                    <div class="card">
+                        <div class="profile-header">
+                            <img src="" alt="Avatar" class="profile-avatar" id="profileAvatar">
+                            <div class="profile-name" id="profileName"></div>
+                            <div class="profile-bio" id="profileBio"></div>
+                            <button class="logout-btn" id="logoutBtn">Log Out</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA & STATE ---
+        const DB = {
+            USERS: 'alexos_users',
+            CURRENT: 'alexos_current_user',
+            POSTS: 'alexos_posts',
+            MESSAGES: 'alexos_messages',
+            THEME: 'alexos_theme'
+        };
+
+        let currentUser = null;
+        let currentVibe = null;
+        let currentImage = null;
+        let activeChatUserId = null;
+
+        // --- HELPERS ---
+        const get = (key) => JSON.parse(localStorage.getItem(key)) || [];
+        const set = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+        const escapeHtml = (text) => { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+        const getAvatar = (seed) => `https://api.dicebear.com/7.0/avataaars/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+
+        function getTimeAgo(ts) {
+            const s = Math.floor((Date.now() - ts) / 1000);
+            if (s < 60) return 'Just now';
+            if (s < 3600) return `${Math.floor(s/60)}m`;
+            if (s < 86400) return `${Math.floor(s/3600)}h`;
+            return `${Math.floor(s/86400)}d`;
+        }
+
+        // --- AUTH SYSTEM ---
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const isLogin = tab.dataset.tab === 'login';
+                document.getElementById('loginForm').style.display = isLogin ? 'block' : 'none';
+                document.getElementById('signupForm').style.display = isLogin ? 'none' : 'block';
+                document.getElementById('authError').innerText = '';
+            });
+        });
+
+        document.getElementById('signupForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('signupUsername').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const bio = document.getElementById('signupBio').value.trim();
+            const errEl = document.getElementById('authError');
+
+            const users = get(DB.USERS);
+            if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
+                errEl.innerText = 'Username already taken.'; return;
+            }
+
+            const newUser = { id: Date.now(), username, password, bio: bio || 'Hello Alexos!', avatarSeed: username };
+            users.push(newUser);
+            set(DB.USERS, users);
+            loginUser(newUser.id);
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errEl = document.getElementById('authError');
+
+            const user = get(DB.USERS).find(u => u.username === username && u.password === password);
+            if (!user) { errEl.innerText = 'Invalid username or password.'; return; }
+            loginUser(user.id);
+        });
+
+        function loginUser(userId) {
+            localStorage.setItem(DB.CURRENT, userId);
+            currentUser = get(DB.USERS).find(u => u.id === userId);
+            initApp();
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem(DB.CURRENT);
+            location.reload();
+        });
+
+        // --- APP INITIALIZATION ---
+        function initApp() {
+            if (!currentUser) return;
+            document.getElementById('authOverlay').style.display = 'none';
+            document.getElementById('appContainer').classList.add('active');
+
+            // Set UI elements
+            document.getElementById('navAvatar').src = getAvatar(currentUser.avatarSeed);
+            document.getElementById('composerAvatar').src = getAvatar(currentUser.avatarSeed);
+            document.getElementById('profileAvatar').src = getAvatar(currentUser.avatarSeed);
+            document.getElementById('profileName').innerText = currentUser.username;
+            document.getElementById('profileBio').innerText = currentUser.bio;
+
+            renderFeed();
+            renderContacts();
+            updateInboxBadge();
+        }
+
+        // --- THEME TOGGLE ---
+        const themeToggle = document.getElementById('themeToggle');
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            themeToggle.innerText = theme === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem(DB.THEME, theme);
+        }
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
+        applyTheme(localStorage.getItem(DB.THEME) || 'dark');
+
+        // --- NAVIGATION ---
+        const views = { feed: 'feedView', inbox: 'inboxView', profile: 'profileView' };
+        function switchView(viewName) {
+            Object.values(views).forEach(id => document.getElementById(id).classList.remove('active'));
+            document.getElementById(views[viewName]).classList.add('active');
+            if (viewName === 'inbox') renderContacts();
+        }
+        document.getElementById('feedBtn').addEventListener('click', () => switchView('feed'));
+        document.getElementById('inboxBtn').addEventListener('click', () => switchView('inbox'));
+        document.getElementById('navAvatar').addEventListener('click', () => switchView('profile'));
+
+        // --- FEED & POSTS ---
+        const postInput = document.getElementById('postInput');
+        const publishBtn = document.getElementById('publishBtn');
+        const imageUpload = document.getElementById('imageUpload');
+
+        postInput.addEventListener('input', () => {
+            postInput.style.height = 'auto';
+            postInput.style.height = postInput.scrollHeight + 'px';
+            publishBtn.disabled = !(postInput.value.trim() || currentImage);
+        });
+
+        document.querySelectorAll('.vibe-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (currentVibe === btn.dataset.vibe) { currentVibe = null; btn.classList.remove('active'); }
+                else { document.querySelectorAll('.vibe-btn').forEach(b => b.classList.remove('active')); currentVibe = btn.dataset.vibe; btn.classList.add('active'); }
+            });
+        });
+
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX = 600; let w = img.width, h = img.height;
+                    if (w > MAX) { h *= MAX / w; w = MAX; }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    currentImage = canvas.toDataURL('image/jpeg', 0.5);
+                    publishBtn.disabled = false;
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        publishBtn.addEventListener('click', () => {
+            const content = postInput.value.trim();
+            if (!content && !currentImage) return;
+            const posts = get(DB.POSTS);
+            posts.unshift({ id: Date.now(), userId: currentUser.id, content, image: currentImage, vibe: currentVibe, timestamp: Date.now() });
+            set(DB.POSTS, posts);
+            
+            postInput.value = ''; currentImage = null; currentVibe = null;
+            document.querySelectorAll('.vibe-btn').forEach(b => b.classList.remove('active'));
+            publishBtn.disabled = true;
+            renderFeed();
+        });
+
+        function renderFeed() {
+            const posts = get(DB.POSTS);
+            const users = get(DB.USERS);
+            const container = document.getElementById('feedContainer');
+            container.innerHTML = '';
+
+            if (posts.length === 0) {
+                container.innerHTML = '<div class="card" style="padding:40px; text-align:center; color:var(--text-secondary)">No posts yet. Share your first vibe!</div>';
+                return;
+            }
+
+            posts.forEach(post => {
+                const user = users.find(u => u.id === post.userId) || { username: 'Unknown', avatarSeed: 'unknown' };
+                const isOwner = post.userId === currentUser.id;
+                const el = document.createElement('div');
+                el.className = `card post-card animate-in ${post.vibe ? 'vibe-' + post.vibe : ''}`;
+                el.innerHTML = `
+                    <div class="post-header">
+                        <img src="${getAvatar(user.avatarSeed)}" class="avatar">
+                        <div class="post-user-info">
+                            <div class="post-user-name">${escapeHtml(user.username)}</div>
+                            <div class="post-time">${getTimeAgo(post.timestamp)}</div>
+                        </div>
+                        ${isOwner ? `<button class="delete-post-btn" onclick="deletePost(${post.id})">&times;</button>` : ''}
+                    </div>
+                    ${post.content ? `<div class="post-content">${escapeHtml(post.content)}</div>` : ''}
+                    ${post.image ? `<img src="${post.image}" class="post-image">` : ''}
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        window.deletePost = (id) => {
+            if (confirm('Delete this post?')) {
+                set(DB.POSTS, get(DB.POSTS).filter(p => p.id !== id));
+                renderFeed();
+            }
+        };
+
+        // --- INBOX & MESSAGING ---
+        function renderContacts() {
+            const users = get(DB.USERS).filter(u => u.id !== currentUser.id);
+            const messages = get(DB.MESSAGES);
+            const list = document.getElementById('contactsList');
+            list.innerHTML = '';
+
+            if (users.length === 0) {
+                list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-secondary)">No other users yet. Invite friends!</div>';
+                return;
+            }
+
+            users.forEach(user => {
+                const chatMsgs = messages.filter(m => 
+                    (m.from === currentUser.id && m.to === user.id) || 
+                    (m.from === user.id && m.to === currentUser.id)
+                ).sort((a,b) => a.timestamp - b.timestamp);
+                
+                const lastMsg = chatMsgs.length > 0 ? chatMsgs[chatMsgs.length - 1].content : 'No messages yet';
+                const unread = chatMsgs.filter(m => m.to === currentUser.id && !m.read).length;
+
+                const el = document.createElement('div');
+                el.className = `contact-item ${activeChatUserId === user.id ? 'active' : ''}`;
+                el.innerHTML = `
+                    <img src="${getAvatar(user.avatarSeed)}" class="avatar">
+                    <div style="flex:1; overflow:hidden;">
+                        <div class="contact-name">${escapeHtml(user.username)} ${unread > 0 ? `<span style="color:var(--accent); font-size:12px;">(${unread})</span>` : ''}</div>
+                        <div class="contact-preview">${escapeHtml(lastMsg)}</div>
+                    </div>
+                `;
+                el.addEventListener('click', () => openChat(user.id));
+                list.appendChild(el);
+            });
+        }
+
+        function openChat(userId) {
+            activeChatUserId = userId;
+            const user = get(DB.USERS).find(u => u.id === userId);
+            const chatArea = document.getElementById('chatArea');
+            
+            chatArea.classList.add('active-mobile'); // For mobile
+            chatArea.innerHTML = `
+                <div class="chat-header">
+                    <img src="${getAvatar(user.avatarSeed)}" class="avatar" style="width:32px; height:32px;">
+                    <span>${escapeHtml(user.username)}</span>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-area">
+                    <input type="text" class="chat-input" id="msgInput" placeholder="Type a message...">
+                    <button class="send-btn" id="sendMsgBtn">➤</button>
+                </div>
+            `;
+
+            renderMessages();
+            
+            const msgInput = document.getElementById('msgInput');
+            const sendBtn = document.getElementById('sendMsgBtn');
+            
+            const sendMsg = () => {
+                const text = msgInput.value.trim();
+                if (!text) return;
+                const msgs = get(DB.MESSAGES);
+                msgs.push({ id: Date.now(), from: currentUser.id, to: userId, content: text, timestamp: Date.now(), read: false });
+                set(DB.MESSAGES, msgs);
+                msgInput.value = '';
+                renderMessages();
+                renderContacts();
+            };
+
+            sendBtn.addEventListener('click', sendMsg);
+            msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMsg(); });
+            msgInput.focus();
+        }
+
+        function renderMessages() {
+            if (!activeChatUserId) return;
+            const container = document.getElementById('chatMessages');
+            const msgs = get(DB.MESSAGES).filter(m => 
+                (m.from === currentUser.id && m.to === activeChatUserId) || 
+                (m.from === activeChatUserId && m.to === currentUser.id)
+            ).sort((a,b) => a.timestamp - b.timestamp);
+
+            // Mark as read
+            const allMsgs = get(DB.MESSAGES);
+            allMsgs.forEach(m => { if (m.to === currentUser.id && m.from === activeChatUserId) m.read = true; });
+            set(DB.MESSAGES, allMsgs);
+            updateInboxBadge();
+
+            container.innerHTML = '';
+            msgs.forEach(m => {
+                const isSent = m.from === currentUser.id;
+                const bubble = document.createElement('div');
+                bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
+                bubble.innerText = m.content;
+                container.appendChild(bubble);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateInboxBadge() {
+            const unread = get(DB.MESSAGES).filter(m => m.to === currentUser.id && !m.read).length;
+            const badge = document.getElementById('inboxBadge');
+            badge.innerText = unread;
+            badge.classList.toggle('active', unread > 0);
+        }
+
+        // --- CROSS-TAB SYNC (Real-time feel) ---
+        window.addEventListener('storage', (e) => {
+            if (e.key === DB.MESSAGES) {
+                renderMessages();
+                renderContacts();
+                updateInboxBadge();
+            }
+            if (e.key === DB.POSTS) {
+                renderFeed();
+            }
+        });
+
+        // --- BOOTSTRAP ---
+        const savedUserId = localStorage.getItem(DB.CURRENT);
+        if (savedUserId) {
+            currentUser = get(DB.USERS).find(u => u.id === parseInt(savedUserId));
+            if (currentUser) initApp();
+        }
+    </script>
+</body>
+</html>
