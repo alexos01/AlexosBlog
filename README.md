@@ -60,4 +60,7 @@ Alexos leverages the browser's native `window.addEventListener('storage', ...)` 
 ---
 
 ## To use the app
+open the link below 
+
+https://alexos01.github.io/AlexosBlog/
 
